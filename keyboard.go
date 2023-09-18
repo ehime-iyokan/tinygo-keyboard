@@ -23,8 +23,11 @@ type Device struct {
 
 	kb []KBer
 
-	layer   int
-	pressed []Keycode
+	layer            int
+	pressed          []Keycode
+	released_flag    bool
+	released_buf     []Keycode
+	released_Counter int
 }
 
 type KBer interface {
@@ -56,10 +59,13 @@ func New() *Device {
 		Port: k.Port(),
 	}
 	d := &Device{
-		Keyboard: kb,
-		Mouse:    mouse.Port(),
-		pressed:  make([]Keycode, 0, 10),
-		flashCh:  make(chan bool, 10),
+		Keyboard:         kb,
+		Mouse:            mouse.Port(),
+		pressed:          make([]Keycode, 0, 10),
+		flashCh:          make(chan bool, 10),
+		released_flag:    false,
+		released_buf:     make([]Keycode, 0, 10),
+		released_Counter: 0,
 	}
 
 	SetDevice(d)
@@ -166,15 +172,38 @@ func (d *Device) Tick() error {
 
 			case Press:
 			case PressToRelease:
+				d.released_flag = true
+				d.released_Counter = 0
+
 				x := k.Key(d.layer, i)
 
 				for i, p := range d.pressed {
 					if x == p {
 						d.pressed = append(d.pressed[:i], d.pressed[i+1:]...)
-						pressToRelease = append(pressToRelease, x)
+						d.released_buf = append(d.released_buf, x)
 					}
 				}
 			}
+		}
+	}
+
+	// wait count for chattering prevention
+	// チャタリング防止の待機時間を多めにしている 150[ms] (3[ms](tinygo-keyboard の周期) * 50[count])
+	// 結果：チャタリングは消えているが、入力順が入れ替わることがある → 各キーごとにカウントする処理に変更する？
+	releaseCount := 50
+	if d.released_flag == true {
+		if d.released_Counter >= releaseCount {
+			for _, released := range d.released_buf {
+				pressToRelease = append(pressToRelease, released)
+			}
+			d.released_buf = []Keycode{}
+			d.released_flag = false
+		}
+	}
+	if len(d.released_buf) >= 1 {
+		d.released_Counter++
+		if d.released_Counter > releaseCount {
+			d.released_Counter = releaseCount
 		}
 	}
 
@@ -268,7 +297,8 @@ func (d *Device) Loop(ctx context.Context) error {
 			return err
 		}
 
-		time.Sleep(10 * time.Millisecond)
+		// チャタリングを発生させるために周期を変更 (10[ms] → 3[ms])
+		time.Sleep(3 * time.Millisecond)
 	}
 
 	return nil
