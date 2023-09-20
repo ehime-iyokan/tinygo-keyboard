@@ -7,9 +7,10 @@ import (
 )
 
 type DuplexMatrixKeyboard struct {
-	State    []State
-	Keys     [][]Keycode
-	callback Callback
+	State          []State
+	releaseCounter int
+	Keys           [][]Keycode
+	callback       Callback
 
 	Col []machine.Pin
 	Row []machine.Pin
@@ -55,6 +56,8 @@ func (d *DuplexMatrixKeyboard) SetCallback(fn Callback) {
 }
 
 func (d *DuplexMatrixKeyboard) Get() []State {
+	count := 3
+
 	for c := range d.Col {
 		d.Col[c].Configure(machine.PinConfig{Mode: machine.PinOutput})
 		d.Col[c].Low()
@@ -76,11 +79,15 @@ func (d *DuplexMatrixKeyboard) Get() []State {
 					d.callback(0, idx, Press)
 					d.callback(0, idx, PressToRelease)
 				}
+				d.releaseCounter = 0
 			case Press:
 				if current {
+					d.releaseCounter = 0
 				} else {
-					d.State[idx] = PressToRelease
-					d.callback(0, idx, PressToRelease)
+					if d.releaseCounter >= count {
+						d.State[idx] = PressToRelease
+						d.callback(0, idx, PressToRelease)
+					}
 				}
 			case PressToRelease:
 				if current {
@@ -116,11 +123,15 @@ func (d *DuplexMatrixKeyboard) Get() []State {
 					d.callback(0, idx, Press)
 					d.callback(0, idx, PressToRelease)
 				}
+				d.releaseCounter = 0
 			case Press:
 				if current {
+					d.releaseCounter = 0
 				} else {
-					d.State[idx] = PressToRelease
-					d.callback(0, idx, PressToRelease)
+					if d.releaseCounter >= count {
+						d.State[idx] = PressToRelease
+						d.callback(0, idx, PressToRelease)
+					}
 				}
 			case PressToRelease:
 				if current {
@@ -134,6 +145,8 @@ func (d *DuplexMatrixKeyboard) Get() []State {
 		d.Row[r].High()
 		d.Row[r].Configure(machine.PinConfig{Mode: machine.PinInputPullup})
 	}
+	d.releaseCounter++
+	d.releaseCounter = d.releaseCounter % (count + 1)
 
 	return d.State
 }
