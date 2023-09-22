@@ -61,7 +61,8 @@ func (d *DuplexMatrixKeyboard) SetCallback(fn Callback) {
 }
 
 func (d *DuplexMatrixKeyboard) Get() []State {
-	count := uint8(3)
+	//waiting count for chattering prevention
+	count := uint8(4)
 
 	for c := range d.Col {
 		d.Col[c].Configure(machine.PinConfig{Mode: machine.PinOutput})

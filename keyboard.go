@@ -268,8 +268,7 @@ func (d *Device) Loop(ctx context.Context) error {
 			return err
 		}
 
-		// チャタリングを発生させるために周期を変更 (10[ms] → 3[ms])
-		time.Sleep(3 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 	}
 
 	return nil
