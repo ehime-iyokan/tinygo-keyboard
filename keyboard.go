@@ -68,10 +68,11 @@ func New() *Device {
 	return d
 }
 
-func (d *Device) OverrideCtrlH() {
+func (d *Device) MacroSet(input []Keycode) {
 	d.Keyboard = &Keyboard{
-		Port:          k.Port(),
-		overrideCtrlH: true,
+		Port:       k.Port(),
+		macroFlag:  true,
+		macroInput: input,
 	}
 }
 
@@ -377,10 +378,11 @@ func (d *Device) SetKeycodeVia(layer, kbIndex, index int, key Keycode) {
 type Keycode k.Keycode
 
 type Keyboard struct {
-	pressed       []k.Keycode
-	override      []k.Keycode
-	Port          UpDowner
-	overrideCtrlH bool
+	pressed    []k.Keycode
+	override   []k.Keycode
+	Port       UpDowner
+	macroFlag  bool
+	macroInput []Keycode
 }
 
 func (k *Keyboard) Up(c k.Keycode) error {
@@ -416,12 +418,21 @@ func (k *Keyboard) Down(c k.Keycode) error {
 	if !found {
 		k.pressed = append(k.pressed, c)
 
-		if k.overrideCtrlH && len(k.pressed) == 2 && k.pressed[0] == keycodes.KeyLeftCtrl && k.pressed[1] == keycodes.KeyH {
-			for _, p := range k.pressed {
-				k.Port.Up(p)
+		if k.macroFlag && len(k.pressed) == len(k.macroInput) {
+			matched := true
+			for i := 0; i < len(k.pressed); i++ {
+				if Keycode(k.pressed[i]) != k.macroInput[i] {
+					matched = false
+					break
+				}
 			}
-			k.override = append(k.override, keycodes.KeyBackspace)
-			return k.Port.Down(keycodes.KeyBackspace)
+			if matched {
+				for _, p := range k.pressed {
+					k.Port.Up(p)
+				}
+				k.override = append(k.override, keycodes.KeyBackspace)
+				return k.Port.Down(keycodes.KeyBackspace)
+			}
 		} else {
 			if len(k.override) > 0 {
 				for _, p := range k.override {
