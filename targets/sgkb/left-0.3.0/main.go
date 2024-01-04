@@ -84,9 +84,13 @@ func run() error {
 	})
 
 	// override ctrl-h to BackSpace
-	d.MacroSet([]keyboard.Keycode{
-		jp.KeyLeftCtrl, jp.KeyH,
-	})
+	d.MacroSet(
+		[]keyboard.Keycode{
+			jp.KeyLeftCtrl, jp.KeyH,
+		},
+		[]keyboard.Keycode{
+			jp.KeyBackspace,
+		})
 
 	loadKeyboardDef()
 

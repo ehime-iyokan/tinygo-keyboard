@@ -68,11 +68,12 @@ func New() *Device {
 	return d
 }
 
-func (d *Device) MacroSet(input []Keycode) {
+func (d *Device) MacroSet(input []Keycode, output []Keycode) {
 	d.Keyboard = &Keyboard{
-		Port:       k.Port(),
-		macroFlag:  true,
-		macroInput: input,
+		Port:        k.Port(),
+		macroFlag:   true,
+		macroInput:  input,
+		macroOutput: output,
 	}
 }
 
@@ -378,11 +379,12 @@ func (d *Device) SetKeycodeVia(layer, kbIndex, index int, key Keycode) {
 type Keycode k.Keycode
 
 type Keyboard struct {
-	pressed    []k.Keycode
-	override   []k.Keycode
-	Port       UpDowner
-	macroFlag  bool
-	macroInput []Keycode
+	pressed     []k.Keycode
+	override    []k.Keycode
+	Port        UpDowner
+	macroFlag   bool
+	macroInput  []Keycode
+	macroOutput []Keycode
 }
 
 func (k *Keyboard) Up(c k.Keycode) error {
@@ -408,42 +410,51 @@ func (k *Keyboard) Up(c k.Keycode) error {
 	return nil
 }
 
-func (k *Keyboard) Down(c k.Keycode) error {
+func (kb *Keyboard) Down(c k.Keycode) error {
 	found := false
-	for _, p := range k.pressed {
+	for _, p := range kb.pressed {
 		if c == p {
 			found = true
 		}
 	}
 	if !found {
-		k.pressed = append(k.pressed, c)
+		kb.pressed = append(kb.pressed, c)
 
-		if k.macroFlag && len(k.pressed) == len(k.macroInput) {
+		if kb.macroFlag && len(kb.pressed) == len(kb.macroInput) {
 			matched := true
-			for i := 0; i < len(k.pressed); i++ {
-				if Keycode(k.pressed[i]) != k.macroInput[i] {
+			for i := 0; i < len(kb.pressed); i++ {
+				if kb.pressed[i] != k.Keycode(kb.macroInput[i]) {
 					matched = false
 					break
 				}
 			}
 			if matched {
-				for _, p := range k.pressed {
-					k.Port.Up(p)
+				for _, p := range kb.pressed {
+					kb.Port.Up(p)
 				}
-				k.override = append(k.override, keycodes.KeyBackspace)
-				return k.Port.Down(keycodes.KeyBackspace)
+				for _, key := range kb.macroOutput {
+					kb.override = append(kb.override, k.Keycode(key))
+				}
+				err := error(nil)
+				for _, output := range kb.override {
+					err = kb.Port.Down(output)
+					if err != nil {
+						return err
+					}
+				}
+				return err
 			}
 		} else {
-			if len(k.override) > 0 {
-				for _, p := range k.override {
-					k.Port.Up(p)
+			if len(kb.override) > 0 {
+				for _, p := range kb.override {
+					kb.Port.Up(p)
 				}
-				k.override = k.override[:0]
-				for _, p := range k.pressed {
-					k.Port.Down(p)
+				kb.override = kb.override[:0]
+				for _, p := range kb.pressed {
+					kb.Port.Down(p)
 				}
 			}
-			return k.Port.Down(c)
+			return kb.Port.Down(c)
 		}
 	}
 	return nil
