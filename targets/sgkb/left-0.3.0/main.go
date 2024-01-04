@@ -83,11 +83,14 @@ func run() error {
 		fmt.Printf("uk: %d %d %d\n", layer, index, state)
 	})
 
+	// TODO:Needs to be fixed. Replace OverrideCtrlH() with MacroSet() in all other source code.
 	// override ctrl-h to BackSpace
 	d.MacroSet(
+		// TODO:Needs to be fixed. When multiple character-input-keys are set, it does not work well (e.g. jp.Key0, jp.Key1,).
 		[]keyboard.Keycode{
 			jp.KeyLeftCtrl, jp.KeyH,
 		},
+		// TODO:Needs to be fixed. Specifying the same key multiple times in a row does not work well (e.g. jp.KeyBackspace, jp.KeyBackspace,).
 		[]keyboard.Keycode{
 			jp.KeyBackspace,
 		})
