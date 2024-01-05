@@ -443,6 +443,17 @@ func (kb *Keyboard) Down(c k.Keycode) error {
 					}
 				}
 				return err
+			} else {
+				if len(kb.override) > 0 {
+					for _, p := range kb.override {
+						kb.Port.Up(p)
+					}
+					kb.override = kb.override[:0]
+					for _, p := range kb.pressed {
+						kb.Port.Down(p)
+					}
+				}
+				return kb.Port.Down(c)
 			}
 		} else {
 			if len(kb.override) > 0 {

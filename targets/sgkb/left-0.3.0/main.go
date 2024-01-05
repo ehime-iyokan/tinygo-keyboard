@@ -83,6 +83,10 @@ func run() error {
 		fmt.Printf("uk: %d %d %d\n", layer, index, state)
 	})
 
+	// TODO:Needs to be fixed. Processing speed is slow and key input speed is not keeping up.
+	// ↑ done.:Improved by modifying the part that is different from the original CtrlH override process.
+	// TODO:Needs to be fixed. Keys may become unresponsive when pressed simultaneously
+	// ↑ done.:Improved by modifying the part that is different from the original CtrlH override process.
 	// TODO:Needs to be fixed. Replace OverrideCtrlH() with MacroSet() in all other source code.
 	// override ctrl-h to BackSpace
 	d.MacroSet(
